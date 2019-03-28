@@ -4,23 +4,24 @@ import com.alibaba.fastjson.JSON;
 import com.ylzinfo.bib.core.springutils.SpringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.JoinPoint;
-import org.aspectj.lang.annotation.AfterReturning;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
-import org.aspectj.lang.annotation.Before;
 import org.aspectj.lang.annotation.Pointcut;
+import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.io.InputStreamSource;
+import org.springframework.stereotype.Component;
+
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
+import java.lang.reflect.Method;
+import java.util.*;
 
 /********************************************************************************
  *
- * Title: aop日志处理
+ * Title: aop日志跟踪
  *
  * Description:
  *
@@ -29,29 +30,46 @@ import java.util.List;
  *
  *******************************************************************************/
 @Aspect
-@Order(0)
+@Order(-1)
 @Slf4j
+@Component
 public class WebLogAOP {
     @Pointcut("execution(public * com.ylzinfo.bib.*..*Controller.*(..))")
     public void webLog() {
     }
 
-    @Pointcut("execution(public * com.ylzinfo.bib.*.exception..*Handler.*(..))")
-    public void webExcepLog() {
+    @Around("webLog()")
+    public Object doAround(ProceedingJoinPoint joinPoint) throws Throwable {
+        Object result = null;
+        boolean ignore = ignoreLog(((MethodSignature) joinPoint.getSignature()).getMethod());
+        try {
+            doBeforeLog(joinPoint, ignore);
+            result = joinPoint.proceed();
+        } finally {
+            doAfter(result, ignore);
+        }
+        return result;
+
+
     }
 
+    /**
+     * 是否忽略日志
+     *
+     * @param method
+     * @return
+     */
+    private boolean ignoreLog(Method method) {
+        IgnoreLog ignoreLog = method.getAnnotation(IgnoreLog.class);
+        if (ignoreLog == null) {
+            return false;
+        } else {
+            return ignoreLog.value();
+        }
 
-    @Before("webLog()")
-    public void doBefore(JoinPoint joinPoint) {
-        HttpServletRequest request = SpringUtils.getSpringRequest();
-        log.info("请求地址 : " + request.getRequestURL().toString());
-        log.info("请求方法 : " + request.getMethod());
-        log.info("IP地址 : " + request.getRemoteAddr());
-        log.info("处理方法 : " + joinPoint.getSignature().getDeclaringTypeName() + "." + joinPoint.getSignature().getName());
-        log.info("请求数据: " + getRequestJsonString(joinPoint));
     }
 
-    public String getRequestJsonString(JoinPoint joinPoint) {
+    private String getRequestJsonString(JoinPoint joinPoint) {
         //是否有流类型
         //传出去
         List list = new ArrayList();
@@ -82,16 +100,39 @@ public class WebLogAOP {
         return message;
     }
 
-    @AfterReturning(returning = "ret", pointcut = "webExcepLog()")
-    public void doAfterExceptionReturning(Object ret) {
-        doAfterReturning(ret);
-
+    /**
+     * 切入前
+     *
+     * @param joinPoint
+     */
+    private void doBeforeLog(ProceedingJoinPoint joinPoint, boolean ignore) {
+        HttpServletRequest request = SpringUtils.getSpringRequest();
+        log.info("请求地址 : " + request.getRequestURL().toString());
+        log.info("请求方法 : " + request.getMethod());
+        log.info("IP地址 : " + request.getRemoteAddr());
+        log.info("处理方法 : " + joinPoint.getSignature().getDeclaringTypeName() + "." + joinPoint.getSignature().getName());
+        if (ignore) {
+            log.info("此方法不输出请求数据！");
+        } else {
+            log.info("请求数据: " + getRequestJsonString(joinPoint));
+        }
     }
 
-    @AfterReturning(returning = "ret", pointcut = "webLog()")
-    public void doAfterReturning(Object ret) {
-        // 处理完请求，返回内容
-        log.info("响应数据 : " + JSON.toJSONString(ret));
+    /**
+     * 切入后
+     *
+     * @param o
+     */
+    private void doAfter(Object o, boolean ignore) {
+        if (ignore) {
+            return;
+        }
+        if (!Objects.isNull(o)) {
+            log.info("响应数据 : " + JSON.toJSONString(o));
+        } else {
+            log.info("响应数据 : null");
+        }
     }
+
 
 }

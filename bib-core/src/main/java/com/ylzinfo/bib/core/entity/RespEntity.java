@@ -31,16 +31,21 @@ public class RespEntity<T> implements Serializable {
         this(httpStatus, message, null);
     }
 
-    public RespEntity(HttpStatus httpStatus, String message, T t) {
-        this.reqCode = httpStatus.value();
+    public RespEntity(int reqCode, String message, T t) {
+        this.reqCode = reqCode;
         this.message = message;
         this.reqTime = new Date();
         this.data = t;
     }
-
+    public RespEntity(HttpStatus httpStatus, String message, T t) {
+        this(httpStatus.value(), message, t);
+    }
 
     public RespEntity(HttpStatus httpStatus, List<String> messageList) {
-        this.reqCode = httpStatus.value();
+        this(httpStatus.value(), messageList);
+    }
+    public RespEntity(int reqCode, List<String> messageList) {
+        this.reqCode = reqCode;
         this.message = "";
         for (String s : messageList) {
             this.message = this.message + ";" + s;

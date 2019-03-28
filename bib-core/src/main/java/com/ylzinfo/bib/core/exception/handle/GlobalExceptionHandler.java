@@ -10,6 +10,7 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
@@ -100,6 +101,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         String message = String.format("%s:%s", field, code);
         log.error("--------->数据绑定错误!", ex);
         RespEntity respEntity = new RespEntity(HttpStatus.BAD_REQUEST, message);
+        return new ResponseEntity<>(respEntity, headers, status);
+    }
+    @Override
+    protected ResponseEntity<Object> handleHttpMessageNotReadable(HttpMessageNotReadableException ex, HttpHeaders headers, HttpStatus status, WebRequest request) {
+        log.error("--------->数据绑定错误!", ex);
+        RespEntity respEntity = new RespEntity(HttpStatus.BAD_REQUEST, ex.getMessage());
         return new ResponseEntity<>(respEntity, headers, status);
     }
 
