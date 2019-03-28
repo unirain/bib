@@ -1,0 +1,6 @@
+spring:
+  datasource:
+    druid:
+      url: jdbc:oracle:thin:@192.168.44.187:1521/csgo
+      username: YLZ_WXSB
+      password: YLZ_WXSB
