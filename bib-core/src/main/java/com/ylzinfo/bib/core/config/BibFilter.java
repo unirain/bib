@@ -43,7 +43,8 @@ public class BibFilter {
         public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
             HttpServletRequest hreq = (HttpServletRequest) servletRequest;
             String reqMethod = hreq.getMethod();
-            if ((HttpMethod.GET.name().equals(reqMethod))) {
+            String transfer=hreq.getHeader("transfer-encoding");
+            if ((HttpMethod.GET.name().equals(reqMethod))||"chunked".equals(transfer)) {
                 //get请求直接放行
                 filterChain.doFilter(servletRequest, servletResponse);
             } else {
